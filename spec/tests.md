@@ -27,6 +27,7 @@ marker wherever it can.
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |----|----|----|--------|
 | FR-001 pytest trace-marker plugin | AC-1..11; CON-1 | TC-001..TC-015 | ✅ Implemented — passing |
+| FR-002 implements decorator | AC-1..11; CON-1..4 | TC-016..TC-026 | 🚧 Planned — not run |
 
 ## Test Case Summary
 
@@ -47,12 +48,27 @@ marker wherever it can.
 | TC-013 | Inherited method is emitted as the defining class's symbol (`TestBase.test_x`), equal to `quire coverage --json` | Integration | P1 | FR-001-AC-5 | ✅ Passing |
 | TC-014 | Marks from `pytest.param(..., marks=...)` are not function markers and emit no id | Integration | P1 | FR-001-AC-3 | ✅ Passing |
 | TC-015 | A `trace` marker with keyword arguments fails the enabled run naming the test | Integration | P1 | FR-001-AC-4 | ✅ Passing |
+| TC-016 | Identity: `@implements` on a function, `async def`, method, staticmethod-wrapped method and class returns the identical object with unchanged behaviour and signature | Unit | P1 | FR-002-AC-1 | 🚧 Planned — not run |
+| TC-017 | No retained reference: `sys.getrefcount` and `gc.get_referrers` of the decorated object unchanged across decoration, with `vars()` and the package namespace equal; a fixture registry in a module, a closure and an in-place list each fail it | Unit | P1 | FR-002-AC-2 | 🚧 Planned — not run |
+| TC-018 | Several ids and a repeated id are accepted | Unit | P1 | FR-002-AC-3 | 🚧 Planned — not run |
+| TC-019 | `implements()` raises `ValueError` showing a well-formed call; a non-`str` argument raises `TypeError` naming its type and position; each at decoration | Unit | P1 | FR-002-AC-4 | 🚧 Planned — not run |
+| TC-020 | `import ix_trace_py` with `pytest` unimportable succeeds, `implements` works, and `pytest` is absent from `sys.modules` | Integration | P1 | FR-002-AC-5 | 🚧 Planned — not run |
+| TC-021 | Stacking above and below another decorator `D` and above `@pytest.mark.trace(...)` yields `D` alone's result and gives `D` the unchanged object | Unit | P1 | FR-002-AC-6 | 🚧 Planned — not run |
+| TC-022 | Valid on module-level, method, nested function, nested class and test function; a test keeps its collection and `trace` property | Integration | P1 | FR-002-AC-7 | 🚧 Planned — not run |
+| TC-023 | Decorated function `is` the undecorated function | Unit | P1 | FR-002-AC-8 | 🚧 Planned — not run |
+| TC-024 | A fixture package decorated with `@implements(...)` and `@ix_trace_py.implements(...)` yields one `implements` per id and no `verifies` through `quire coverage --json`; a renamed import and single-quoted, raw and triple-quoted literals run and bind nothing | E2E | P1 | FR-002-AC-9 | 🚧 Planned — not run |
+| TC-025 | Shape rule: `""`, `"FR 2"`, `"A-1, A-2"`, `"FR-XXX"` and `"1-A"` raise `ValueError` naming the argument; `ZZ-001`, `MADEUP-042-AC-9` and `interface_004-AC-1` are accepted; no kind list exists in the package | Unit | P1 | FR-002-AC-10 | 🚧 Planned — not run |
+| TC-026 | A nested decorated definition checks its ids on each call of the enclosing function, a module-level one once at import, and both return the unchanged object | Unit | P1 | FR-002-AC-11 | 🚧 Planned — not run |
 
 ## Constraint Coverage
 
 | Constraint | Covering evidence |
 |----|----|
 | FR-001-CON-1 | Inspection — the plugin has no post-write rewrite step (`ix_trace_py/plugin.py` only sets attributes on pytest's own reporter before it writes) |
+| FR-002-CON-1 | Inspection — no flag on `trace`; not performed |
+| FR-002-CON-2 | Inspection — the package parses no source; not performed |
+| FR-002-CON-3 | Inspection — no production `trace` export; not performed |
+| FR-002-CON-4 | TC-025 — no kind list in the package, `ZZ-001` accepted |
 
 ## Stakeholder Validation
 
@@ -61,6 +77,8 @@ marker wherever it can.
 | StR-001-VC-1 | US-001; FR-001 | Demonstration — covered by TC-011 | ✅ |
 | StR-001-VC-2 | FR-001 | Demonstration — covered by TC-011 failing variant | ✅ |
 | StR-001-VC-3 | FR-001 | Demonstration — covered by TC-009 | ✅ |
+| StR-002-VC-1 | US-002; FR-002 | Demonstration — covered by TC-024 | 🚧 |
+| StR-002-VC-2 | FR-002 | Demonstration — covered by TC-016 and TC-020 | 🚧 |
 
 ## Verification Status
 
