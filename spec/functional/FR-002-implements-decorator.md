@@ -74,8 +74,9 @@ The static side resolves no import. The spellings it binds are `@implements(...)
 and `@ix_trace_py.implements(...)`, as the module declaration pins them
 ([spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004)).
 A renamed import (`import ix_trace_py as t`, `from ix_trace_py import implements as
-impl`) works at run time and is not bound statically; write one of the two spellings
-for a decorator that is to be read.
+impl`) works at run time and is not bound statically and raises no finding, because the
+shipped patterns are anchored at the start of the candidate; write one of the two
+spellings for a decorator that is to be read.
 
 ### Stacking and placement
 
