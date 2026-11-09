@@ -12,6 +12,7 @@ packages = [{ include = "ix_trace_py" }]
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14"
+pytest = ">=7.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,9 +23,13 @@ py-deps = "*"
 py-project = "^0.4.4"
 pytest = "^9.0.2"
 pytest-cov = "^7.0.0"
+pytest-xdist = "^3.8.0"
 pytest-json-report = "^1.5.0"
 ruff = "^0.14.13"
 pytest-results = { version = "^0.2.0", python = ">=3.12" }
+
+[tool.poetry.plugins.pytest11]
+"ix_trace_py.plugin" = "ix_trace_py.plugin"
 
 [tool.poetry.scripts]
 build-tools = "scripts.build_tools:main"
@@ -47,8 +52,10 @@ help = "Build distribution (wheel + sdist)"
 cmd = "build-tools clean"
 help = "Remove build artifacts"
 
+# The plugin is imported by pytest's entry-point loading, before pytest-cov
+# starts, so coverage must start first: `coverage run -m pytest`.
 [tool.poe.tasks.test]
-cmd = "pytest"
+sequence = [{ cmd = "coverage run -m pytest" }, { cmd = "coverage report" }]
 help = "Run tests with coverage"
 
 [tool.poe.tasks.test-integrations]
@@ -106,7 +113,7 @@ shell = "py-deps use-upstream ${package} || [ $? -eq 1 ] && poetry lock"
 help = "Switch dep to upstream registry"
 
 [tool.pytest.ini_options]
-addopts = "--cov=ix_trace_py --cov-report=term-missing --cov-fail-under=100 --json-report --json-report-file=report.json"
+addopts = "--json-report --json-report-file=report.json"
 
 # ALL WARNINGS MUST BE TREATED AS ERRORS, NO EXCEPTION!
 filterwarnings = ["error"]
@@ -114,6 +121,13 @@ filterwarnings = ["error"]
 markers = [
     "integration: Integration tests (require Kind cluster)",
 ]
+
+[tool.coverage.run]
+source = ["ix_trace_py"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
 
 [tool.ruff]
 line-length = 88
