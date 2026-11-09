@@ -2,11 +2,6 @@ import re
 from collections.abc import Callable
 from typing import TypeVar
 
-
-def hello():
-    return "Hello, World!"
-
-
 _T = TypeVar("_T")
 
 _ID_SHAPE = re.compile(r"[A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9]+)+")
@@ -30,7 +25,7 @@ def implements(*ids: str) -> Callable[[_T], _T]:
         raise ValueError(
             'implements() needs at least one id, e.g. implements("FR-007-AC-1")'
         )
-    for position, value in enumerate(ids):
+    for position, value in enumerate(ids, start=1):
         if not isinstance(value, str):
             raise TypeError(
                 f"implements() argument {position} must be a str, "

@@ -54,21 +54,24 @@ this package does not add one: a test is marked with
 
 ### Arguments
 
-Each argument is a `str` and **id-shaped**, the shape rule of `ix-trace-rs`
-FR-003: a KIND that begins with an ASCII letter, followed by any mix of ASCII
-letters, digits and underscores, then one or more hyphen-separated segments that
-are each non-empty and alphanumeric, at least one of which contains an ASCII
-digit. The package checks shape and never membership: `ZZ-001` is accepted
+Each argument is a `str` and **id-shaped**: a KIND that begins with an ASCII
+letter, followed by any mix of ASCII letters, digits and underscores, then one or
+more hyphen-separated segments that are each non-empty and alphanumeric, at least
+one of which contains an ASCII digit. This is deliberately wider than the shape
+rule of `ix-trace-rs` FR-003, whose KIND is letters only: the module declares
+`interface_004`-style ids (spec-artifacts-process FR-004-AC-31), and
+`interface_004-AC-1` must be accepted (FR-002-AC-10). The package checks shape and never membership: `ZZ-001` is accepted
 although no module declares that kind, and the kind vocabulary stays in the module.
 At least one argument is required.
 
 - If a call has no argument, then the package SHALL raise `ValueError` whose
   message shows a well-formed call, `implements("FR-007-AC-1")`.
 - If an argument is not a `str`, then the package SHALL raise `TypeError` naming
-  the argument's type and position.
+  the argument's type and its position, counted from one as in CPython's own
+  `argument 1 must be str` messages.
 - If an argument is a `str` that is not id-shaped, including the empty string,
   `"FR 2"` and `"A-1, A-2"`, then the package SHALL raise `ValueError` naming that
-  argument.
+  argument and its one-based position.
 
 Each error is raised when the decorator expression is evaluated, so a mistyped
 marker fails when the decoration executes and not silently.

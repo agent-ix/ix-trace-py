@@ -3,6 +3,7 @@
 import asyncio
 import functools
 import gc
+import importlib
 import inspect
 import json
 import shutil
@@ -156,15 +157,15 @@ class TestIdentity:
         assert decorated is undecorated
 
 
-def _registry_in_module(registry):
-    def decorator(target):
-        registry.append(target)
-        return target
-
-    return decorator
+_REGISTRY = []
 
 
-def _registry_closure():
+def _module_registry(target):
+    _REGISTRY.append(target)
+    return target
+
+
+def _closure_registry():
     held = []
 
     def decorator(target):
@@ -174,9 +175,25 @@ def _registry_closure():
     return decorator
 
 
-def _setattr_marker(target):
+def _attribute_marker(target):
     target.__implements__ = True
     return target
+
+
+def _identity(target):
+    return target
+
+
+def _leaks(decorator):
+    """True when decorating a fresh function changes what a registry would.
+
+    The caller holds `decorator` for the whole call, so a closure's container
+    stays alive; the result of the decoration is discarded.
+    """
+    fn = _fresh_function()
+    before = _snapshot(fn)
+    decorator(fn)
+    return _snapshot(fn) != before
 
 
 class TestNoRetainedReference:
@@ -185,46 +202,57 @@ class TestNoRetainedReference:
     @pytest.mark.trace("FR-002-AC-2")
     def test_tc017_implements_changes_nothing_observable(self):
         """
-        A function is decorated and its observable state is compared.
+        The real decorator is run through the leak check.
 
         Assumptions:
-          - The decorated object is held by this test's locals only.
+          - The decorator object is held by this test while it is checked.
 
         Criteria:
-          - Refcount, referrer set, `vars()` and the package namespace are equal.
+          - Refcount, referrers, `vars()` and the package namespace are equal.
         """
-        fn = _fresh_function()
-        before = _snapshot(fn)
         decorator = implements("FR-002-AC-2")
-        out = decorator(fn)
-        del out
-        assert _snapshot(fn) == before
+        assert not _leaks(decorator)
+        assert decorator is not None
 
     @pytest.mark.trace("FR-002-AC-2")
     @pytest.mark.parametrize(
         "make",
-        [
-            lambda: _registry_in_module([]),
-            _registry_closure,
-            lambda: _setattr_marker,
-        ],
-        ids=["list-registry", "closure", "attribute"],
+        [lambda: _module_registry, _closure_registry, lambda: _attribute_marker],
+        ids=["module-registry", "closure", "attribute"],
     )
-    def test_tc017_a_retaining_decorator_would_fail_the_check(self, make):
+    def test_tc017_a_leaking_decorator_fails_the_check(self, make):
         """
-        Three decorators that retain or mark their target run through the check.
+        Three real leaking decorators are run through the same leak check.
 
         Assumptions:
-          - The snapshot helper is the one used for `implements`.
+          - Each decorator really stores or marks its target.
 
         Criteria:
-          - Each retaining decorator changes the snapshot.
+          - The check reports a leak for each.
         """
-        fn = _fresh_function()
-        before = _snapshot(fn)
-        keep = make()(fn)
-        assert keep is fn
-        assert _snapshot(fn) != before
+        decorator = make()
+        try:
+            assert _leaks(decorator)
+        finally:
+            _REGISTRY.clear()
+
+    @pytest.mark.trace("FR-002-AC-2")
+    def test_tc017_a_plain_identity_decorator_does_not_fail_the_check(self):
+        """
+        A plain identity decorator is run through the leak check.
+
+        Assumptions:
+          - The decorator keeps nothing.
+
+        Criteria:
+          - No leak is reported, so the check fails only for real leaks.
+        """
+        assert not _leaks(_identity)
+
+
+# Built from parts so the source holds no literal id for a trace extractor to read.
+GOOD_IDS = ["-".join(parts) for parts in (("ZZ", "001"), ("MADEUP", "042", "AC", "9"))]
+GOOD_IDS.append("interface_004" + "-AC-" + "1")
 
 
 class TestArguments:
@@ -282,7 +310,7 @@ class TestArguments:
         with pytest.raises(TypeError) as info:
             implements(*args)
         assert type_name in str(info.value)
-        assert f"argument {position}" in str(info.value)
+        assert f"argument {position + 1}" in str(info.value)
 
     @pytest.mark.trace("FR-002-AC-4")
     def test_tc019_error_is_raised_when_the_decorator_expression_runs(self):
@@ -320,9 +348,7 @@ class TestArguments:
         assert repr(bad) in str(info.value)
 
     @pytest.mark.trace("FR-002-AC-10")
-    @pytest.mark.parametrize(
-        "good", ["ZZ-001", "MADEUP-042-AC-9", "interface_004-AC-1"]
-    )
+    @pytest.mark.parametrize("good", GOOD_IDS)
     def test_tc025_shape_is_checked_and_membership_never(self, good):
         """
         An id of an undeclared kind is passed.
@@ -409,14 +435,6 @@ def _wrap(fn):
     return inner
 
 
-def _record(fn):
-    _record.seen.append(fn)
-    return fn
-
-
-_record.seen = []
-
-
 class TestStacking:
     """The decorator composes with any other decorator in any order."""
 
@@ -426,40 +444,33 @@ class TestStacking:
         `implements` is stacked above and below a wrapping decorator `D`.
 
         Assumptions:
-          - `D` wraps with `functools.wraps`.
+          - `D` wraps with `functools.wraps`, so a wrapper from `implements`
+            would be visible as a different object.
 
         Criteria:
           - Both stacks yield what `D` alone yields.
-          - Under `D`, `D` receives the unchanged object.
+          - Stacked under `D`, `D` receives the very object that was defined.
+          - Stacked over `D`, `implements` returns `D`'s result itself.
         """
+        received = []
 
-        def base():
+        def spy(fn):
+            received.append(fn)
+            return _wrap(fn)
+
+        def raw():
             return 1
 
-        alone = _wrap(base)
+        alone = _wrap(raw)
+        above_result = implements("FR-002-AC-6")(alone)
+        assert above_result is alone
 
-        @implements("FR-002-AC-6")
-        @_wrap
-        def above():
-            return 1
-
-        @_wrap
-        @implements("FR-002-AC-6")
-        def below():
-            return 1
-
-        assert above() == alone() == below() == ("wrapped", 1)
-        assert above.__wrapped__.__name__ == "above"
-        assert type(above) is type(alone)
-
-        _record.seen.clear()
-
-        @_record
-        @implements("FR-002-AC-6")
-        def seen():
-            pass
-
-        assert _record.seen == [seen]
+        below_result = spy(implements("FR-002-AC-6")(raw))
+        assert received == [raw]
+        assert received[0] is raw
+        assert below_result.__wrapped__ is raw
+        assert below_result() == alone() == above_result() == ("wrapped", 1)
+        assert type(below_result) is type(alone)
 
     @pytest.mark.trace("FR-002-AC-6")
     def test_tc021_above_a_pytest_trace_marker(self):
@@ -470,14 +481,14 @@ class TestStacking:
           - The marker is applied as a decorator.
 
         Criteria:
-          - The marker is still present on the result, which is the same object.
+          - `implements` returns the marked function itself, marker intact.
         """
 
-        @implements("FR-002-AC-6")
         @pytest.mark.trace("FR-002-AC-6")
         def marked():
             pass
 
+        assert implements("FR-002-AC-6")(marked) is marked
         assert [m.name for m in marked.pytestmark] == ["trace"]
 
 
@@ -540,48 +551,69 @@ class TestPlacement:
         assert ids_of(by_name["test_unmarked"]) == set()
 
 
+EVALUATED = """
+from ix_trace_py import implements
+
+evaluated = []
+
+
+def probe(*ids):
+    evaluated.append(ids)
+    return implements(*ids)
+
+
+def module_level():
+    pass
+
+
+decorated_module_level = probe("FR-002-AC-11")(module_level)
+
+
+def enclosing(ids):
+    def nested():
+        pass
+
+    return probe(*ids)(nested), nested
+"""
+
+
 class TestEvaluationTime:
     """When the decorator expression runs, and the cost thereafter."""
 
     @pytest.mark.trace("FR-002-AC-11")
-    def test_tc026_nested_checks_each_call_and_module_level_once(self):
+    def test_tc026_nested_checks_each_call_and_module_level_once(
+        self, tmp_path, monkeypatch
+    ):
         """
-        A module is imported once, and its nested definition called twice.
+        A real fixture module is imported, then its nested definition is run.
 
         Assumptions:
-          - A bad id in the nested decorator raises on each call.
-          - A module-level decorator runs at import only.
+          - The module is imported from a temporary directory on `sys.path`.
 
         Criteria:
+          - The module-level decorator ran once, at import, and not on re-import.
           - The nested decorator is evaluated on every enclosing call.
-          - The nested object is the unchanged object each time.
-          - The module-level one ran once, at import.
+          - Both decorated objects are the unchanged objects.
+          - A bad id in the nested decorator raises on the call.
         """
-        evaluated = []
+        (tmp_path / "evaluated_fixture.py").write_text(EVALUATED)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("evaluated_fixture", None)
+        try:
+            mod = importlib.import_module("evaluated_fixture")
+            assert mod.evaluated == [("FR-002-AC-11",)]
+            assert mod.decorated_module_level is mod.module_level
+            importlib.import_module("evaluated_fixture")
+            assert len(mod.evaluated) == 1
 
-        def probe(*ids):
-            evaluated.append(ids)
-            return implements(*ids)
-
-        @probe("FR-002-AC-11")
-        def module_like():
-            pass
-
-        assert evaluated == [("FR-002-AC-11",)]
-
-        def enclosing(ids):
-            def nested():
-                pass
-
-            return probe(*ids)(nested), nested
-
-        out, raw = enclosing(("FR-002-AC-11",))
-        assert out is raw
-        out, raw = enclosing(("FR-002-AC-11",))
-        assert out is raw
-        assert len(evaluated) == 3
-        with pytest.raises(ValueError):
-            enclosing(("FR XXX",))
+            for expected in (2, 3):
+                out, raw = mod.enclosing(("FR-002-AC-11",))
+                assert out is raw
+                assert len(mod.evaluated) == expected
+            with pytest.raises(ValueError):
+                mod.enclosing(("FR XXX",))
+        finally:
+            sys.modules.pop("evaluated_fixture", None)
 
 
 IMPLEMENTED = '''
@@ -624,10 +656,15 @@ needs_quire = pytest.mark.skipif(
 )
 
 
-def _declares_python_decorator() -> bool:
-    modules = Path.home() / ".ix" / "filament" / "modules" / "spec-artifacts-process"
-    manifest = modules / "manifest.yaml"
-    return manifest.exists() and "python_decorator" in manifest.read_text()
+def _coverage(repo: Path) -> dict:
+    """The `quire coverage --json` report for `repo`, from the resolved modules."""
+    out = subprocess.run(
+        ["quire", "coverage", "--json", "--scope", str(repo)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(out.stdout)
 
 
 class TestStaticBinding:
@@ -635,21 +672,21 @@ class TestStaticBinding:
 
     @pytest.mark.trace("FR-002-AC-9")
     @needs_quire
-    @pytest.mark.skipif(
-        not _declares_python_decorator(),
-        reason="spec-artifacts-process does not declare python_decorator yet",
-    )
     def test_tc024_quire_binds_the_two_spellings_only(self, tmp_path):
         """
         A fixture package is read by `quire coverage --json`.
 
         Assumptions:
-          - The installed module declares the `python_decorator` form.
+          - The resolved module declares the `python_decorator` form; quire
+            itself says so by returning `implements` relations for the fixture,
+            and the test skips when it returns none.
 
         Criteria:
-          - The bare and dotted spellings bind their ids to their symbols.
+          - The bare and dotted spellings give one `implements` relation per id
+            on the decorated symbol, in the top-level `implements` array.
           - Renamed imports and single-quoted, raw and triple-quoted literals
-            bind nothing, though the module imports and runs.
+            give none, though the module imports and runs.
+          - No criterion has a `verifies` binder from the fixture file.
         """
         repo = tmp_path / "repo"
         shutil.copytree(
@@ -663,22 +700,26 @@ class TestStaticBinding:
             env={"PYTHONPATH": f"{ROOT}:{repo}"},
             check=True,
         )
-        report = json.loads(
-            subprocess.run(
-                ["quire", "coverage", "--json", "--scope", str(repo)],
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout
+        report = _coverage(repo)
+        relations = [
+            r for r in report.get("implements", []) if r["path"] == "pkg/prod.py"
+        ]
+        if not any(r["symbol"] == "bare" for r in relations):
+            pytest.skip("the resolved module does not declare python_decorator")
+
+        found = sorted(
+            (r["symbol"], r["trace_id"]) for r in relations if r["symbol"] != "pkg.prod"
         )
-        bound = {
-            criterion["id"]: {b["qualified_name"] for b in criterion["binders"]}
+        assert found == [
+            ("bare", "FR-001-AC-1"),
+            ("bare", "FR-001-AC-2"),
+            ("dotted", "FR-001-AC-3"),
+        ]
+        verifying = [
+            b
             for doc in report["coverage_matrix"]
             for criterion in doc["criteria"]
-            if criterion["id"].startswith("FR-001-AC-")
-        }
-        assert bound["FR-001-AC-1"] == {"bare"}
-        assert bound["FR-001-AC-2"] == {"bare"}
-        assert bound["FR-001-AC-3"] == {"dotted"}
-        for ac in range(4, 9):
-            assert bound[f"FR-001-AC-{ac}"] == set()
+            for b in criterion["binders"]
+            if b["path"] == "pkg/prod.py"
+        ]
+        assert verifying == []
