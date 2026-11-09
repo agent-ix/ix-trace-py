@@ -152,7 +152,7 @@ unlike the compile-time Rust attribute, executes when its definition does.
 | FR-002-CON-1 | `implements` SHALL NOT be an argument or flag of `trace`. | Design | Inspection |
 | FR-002-CON-2 | The package SHALL NOT parse source or import the extractor to bind a decorator; static binding is quire-rs. | Design | Inspection |
 | FR-002-CON-3 | The package SHALL NOT export a production `trace` decorator. | Design | Inspection |
-| FR-002-CON-4 | The package SHALL NOT encode which kinds exist and SHALL NOT check that an id appears in any matrix. | Design | Test (TC-021) |
+| FR-002-CON-4 | The package SHALL NOT encode which kinds exist; shape is checked and membership never is. | Design | Test (TC-021) |
 
 ## Dependencies
 
