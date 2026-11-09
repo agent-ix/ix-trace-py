@@ -13,6 +13,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
+import yaml
 
 import ix_trace_py
 from ix_trace_py import implements
@@ -656,6 +657,43 @@ needs_quire = pytest.mark.skipif(
 )
 
 
+def _trace_tag_forms(node) -> list[dict]:
+    """Every `trace_tags.implements` entry in a parsed manifest."""
+    found = []
+    if isinstance(node, dict):
+        tags = node.get("trace_tags")
+        if isinstance(tags, dict):
+            found += [e for e in tags.get("implements", []) if isinstance(e, dict)]
+        for value in node.values():
+            found += _trace_tag_forms(value)
+    elif isinstance(node, list):
+        for value in node:
+            found += _trace_tag_forms(value)
+    return found
+
+
+def _declares_python_decorator() -> bool:
+    """Whether an installed module declares an `implements` `python_decorator`."""
+    listing = json.loads(
+        subprocess.run(
+            ["quoin", "module", "list"], capture_output=True, text=True, check=True
+        ).stdout
+    )
+    for plugin in listing["plugins"]:
+        manifest = Path(plugin["targetPath"]) / "manifest.yaml"
+        if not manifest.exists():
+            continue
+        entries = _trace_tag_forms(yaml.safe_load(manifest.read_text()))
+        if any(e.get("syntax") == "python_decorator" for e in entries):
+            return True
+    return False
+
+
+needs_quoin = pytest.mark.skipif(
+    shutil.which("quoin") is None, reason="quoin CLI not installed"
+)
+
+
 def _coverage(repo: Path) -> dict:
     """The `quire coverage --json` report for `repo`, from the resolved modules."""
     out = subprocess.run(
@@ -672,22 +710,26 @@ class TestStaticBinding:
 
     @pytest.mark.trace("FR-002-AC-9")
     @needs_quire
+    @needs_quoin
     def test_tc024_quire_binds_the_two_spellings_only(self, tmp_path):
         """
         A fixture package is read by `quire coverage --json`.
 
         Assumptions:
-          - The resolved module declares the `python_decorator` form; quire
-            itself says so by returning `implements` relations for the fixture,
-            and the test skips when it returns none.
+          - The test skips only when no installed module declares an
+            `implements` entry with `syntax: python_decorator`; once one does,
+            every assertion below runs and a binding regression fails.
 
         Criteria:
           - The bare and dotted spellings give one `implements` relation per id
             on the decorated symbol, in the top-level `implements` array.
           - Renamed imports and single-quoted, raw and triple-quoted literals
             give none, though the module imports and runs.
+          - No decorator relation is attached to the module.
           - No criterion has a `verifies` binder from the fixture file.
         """
+        if not _declares_python_decorator():
+            pytest.skip("no installed module declares implements python_decorator")
         repo = tmp_path / "repo"
         shutil.copytree(
             ROOT / "spec", repo / "spec", ignore=shutil.ignore_patterns("reviews")
@@ -701,16 +743,12 @@ class TestStaticBinding:
             check=True,
         )
         report = _coverage(repo)
-        relations = [
-            r for r in report.get("implements", []) if r["path"] == "pkg/prod.py"
-        ]
-        if not any(r["symbol"] == "bare" for r in relations):
-            pytest.skip("the resolved module does not declare python_decorator")
-
-        found = sorted(
-            (r["symbol"], r["trace_id"]) for r in relations if r["symbol"] != "pkg.prod"
+        decorator_relations = sorted(
+            (r["symbol"], r["trace_id"])
+            for r in report.get("implements", [])
+            if r["path"] == "pkg/prod.py" and not r["form"].endswith("-implements-line")
         )
-        assert found == [
+        assert decorator_relations == [
             ("bare", "FR-001-AC-1"),
             ("bare", "FR-001-AC-2"),
             ("dotted", "FR-001-AC-3"),

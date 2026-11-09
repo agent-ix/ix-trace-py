@@ -37,3 +37,11 @@ A skip for TC-024 is acceptable under the spec as written. FR-002-AC-9's oracle 
 | FND-001 | medium | TC-017 is marked ✅ and says "a fixture registry in a module, a closure and an in-place list each fail it". No module-level registry is tested. The closure and list controls fail only through the test's own `keep` reference, and an identity decorator fails the same harness (SR-015 FND-002). So the row overclaims its FR-002-AC-2 negative-control evidence. Keep the ✅ only after the controls really fail for the stated reason. | spec/tests.md:52, tests/test_implements.py:204-227 |
 | FND-002 | medium | TC-021 is marked ✅ and says it "gives `D` the unchanged object". No assertion in TC-021 can fail for a wrapping `implements` (SR-015 FND-003, measured by mutation). The AC-6 clause "passes `D` the unchanged object" is therefore not backed by TC-021, although TC-016 and TC-023 back identity separately. | spec/tests.md:56, tests/test_implements.py:424-481 |
 | FND-003 | low | FR-002 calls its rule "the shape rule of `ix-trace-rs` FR-003", then states a wider one: a KIND of letters, digits and underscores. ix-trace-rs FR-003 defines KIND as "one or more ASCII letters", which rejects `interface_004-AC-1`, an id that FR-002-AC-10 and spec-artifacts-process FR-004-AC-31 require to be accepted. The code correctly follows FR-002. Only the attribution is wrong. Reword it as "the ix-trace-rs FR-003 rule, widened to a KIND of letters, digits and underscores" (or file the widening against ix-trace-rs FR-003). | spec/functional/FR-002-implements-decorator.md:57-62 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 0db2f3d: the TC-017 row text is unchanged, but the tests now back it. The module-level registry (an in-place list), closure and attribute controls each fail the `_leaks` check, and an identity decorator passes it. |
+| FND-002 | fixed | 0db2f3d: the TC-021 row is unchanged, and TC-021 now asserts that `D` receives the defined object (`received[0] is raw`) and that `implements` returns `D`'s result and the marked function themselves. A wrapping mutation fails both tests. |
+| FND-003 | fixed | 0db2f3d: FR-002 Arguments now states the rule directly and says it is deliberately wider than ix-trace-rs FR-003 (letters-only KIND), citing FR-004-AC-31 and FR-002-AC-10. |
