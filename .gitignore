@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+dist/
+*.egg-info/
+.idea
+.venv/
+node_modules
+.pnpm-store
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.log
+report.json
+
+# Build artifacts
+target/
+*-target/
+.worktrees/
+node_modules/
+dist/
+__pycache__/
