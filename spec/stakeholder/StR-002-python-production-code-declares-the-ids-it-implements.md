@@ -13,7 +13,7 @@ relationships:
 
 Authors of traced Python repositories shall state, on a production
 function, method or class, the specification ids it implements, in a construct
-the language itself checks and the extractor reads from the syntax tree, so that
+that the package checks for shape when the decoration runs and the extractor reads from the syntax tree, so that
 the link from a requirement to its production code does not depend on how a
 comment happens to be worded or wrapped.
 

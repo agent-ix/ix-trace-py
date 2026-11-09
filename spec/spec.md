@@ -61,7 +61,8 @@ contract a writer must meet is the Emitter contract (E-1..E-10) of
 ### Out of Scope
 
 - **Which ids exist.** The kind vocabulary is declared by the module; this
-  package checks neither shape nor membership of an id beyond requiring a `str`.
+  package checks, for the pytest marker, only that an id is a `str`, and, for
+  `implements`, that it is id-shaped; it never checks membership.
 - **Static binding.** Reading the marker from the syntax tree is `quire-rs`
   FR-051, and the plugin imports nothing of it.
 - **Binding the decorator.** Reading `@implements(...)` from the syntax tree is
@@ -86,7 +87,10 @@ A pytest plugin loaded through the `pytest11` entry point. It registers the
 markers on each collected test function, adds one `trace` user property per
 tagged item, and renames the item's reported `name` and `classname` to the
 extractor's `qualified_name`, so pytest's own JUnit writer emits them. It
-imports nothing beyond pytest and the standard library.
+imports nothing beyond pytest and the standard library. Separately, the top-level
+`ix_trace_py` module exports `implements(*ids)`, an identity decorator that checks
+each id's shape and returns what it decorates unchanged; it imports nothing beyond
+the standard library, so production code uses it where pytest is absent.
 
 ### Interfaces
 
