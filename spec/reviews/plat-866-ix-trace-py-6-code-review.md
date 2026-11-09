@@ -29,3 +29,16 @@ Reproduced with quire 0.38.4 (engine 0.55.0) first on PATH. The module was `spec
 | --- | --- | --- | --- |
 | FND-001 | low | TC-024's `Assumptions` docstring and its `pytest.skip` reason still say "no installed module declares implements python_decorator". The gate now also covers the `IX_FILAMENT_MODULES_PATH` modules, so on a host whose variable names a module set without the form, the skip report blames the installed set. Say "no resolvable module" (matching `_declares_python_decorator`'s own docstring) and name the variable. | tests/test_implements.py:745-746, tests/test_implements.py:758 |
 | FND-002 | low | `@needs_quoin` still skips TC-024 when `quoin` is not on PATH, even with `IX_FILAMENT_MODULES_PATH` set. That path never calls `quoin`. A host that has only `quire` plus the module checkout skips a test it could run. Require `quoin` only on the fallback branch, for example by skipping inside `_module_manifests()` when the variable is empty and `quoin` is absent. | tests/test_implements.py:711-713, tests/test_implements.py:739 |
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | low | When `IX_FILAMENT_MODULES_PATH` is set but names no module (a typo, or a path that is gone), `_env_module_dirs()` returns `[]`. `_module_manifests()` then silently falls back to `quoin module list`, which on this host is the stale installed 0.2.0, and TC-024 skips. Measured with `.../spec_artifacts_procss`: 30 passed, 1 skipped, with "no resolvable module declares implements python_decorator". The skip blames the module rather than the misconfigured variable. The pass-or-skip outcome also follows whatever the shared checkout the variable names holds: `/home/peter/dev/spec-artifacts-process` was fast-forwarded from b935498 (no `python_decorator`) to 81d0ba7 at 10:33:34, one minute before c23ef73. This is the likely cause of the reported 30/1 then 31/0 runs. The code is not nondeterministic: five reruns gave 31 passed, and nothing in the tests touches PATH, cwd or the variable. Fix: when the variable is non-empty, use only its modules. Fail, or skip with a reason that names the variable, when it resolves none, and never fall back to `quoin`. | tests/test_implements.py:674-698 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | ac362c8: the docstring reads "no resolvable module declares an `implements` entry", and the skip reason reads "no resolvable module declares implements python_decorator". |
+| FND-002 | fixed | ac362c8: `needs_quoin` is removed. `_module_manifests()` returns `[]` when no env modules resolve and `quoin` is absent, so `quoin` is required only on the fallback path. |

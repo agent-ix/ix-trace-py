@@ -27,3 +27,10 @@ A skip cannot turn into a ✅ by itself. The status cells are authored prose, an
 | --- | --- | --- | --- |
 | FND-001 | low | The FR-002 Dependencies bullet still describes spec-artifacts-process FR-004 as "(the form it will declare)". The Description was updated to "declares since spec-artifacts-process v0.30.0", so the two statements now contradict each other. Change it to "the form it declares". | spec/functional/FR-002-implements-decorator.md:162 |
 | FND-002 | low | The TC-024 status parenthetical says the test "skips on hosts whose modules do not declare `python_decorator`", and Verification Status says it "skips only where none declares" the form. TC-024 also skips when `quire` or `quoin` is absent (`needs_quire`/`needs_quoin`). That includes the repository's own CI: lib-ci runs `poetry run pytest` and installs neither tool. The ✅ therefore rests on a manual host run, and no automated run exercises the binding. State every skip condition, and say that the evidence is a local run with `IX_FILAMENT_MODULES_PATH` set. | spec/tests.md:59, spec/tests.md:85 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | ac362c8: the FR-002 Dependencies bullet now reads "(the form it declares since v0.30.0)", which matches the Description. |
+| FND-002 | fixed | ac362c8: the TC-024 status now names the local run (v0.30.0, quire 0.38.4 / engine 0.55.0) and every skip condition (quire or quoin absent, which is the repo's CI, and no resolvable module declaring `python_decorator`). Verification Status says the ✅ rests on that local run. |

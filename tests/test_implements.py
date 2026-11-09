@@ -686,8 +686,12 @@ def _env_module_dirs() -> list[Path]:
 
 def _module_manifests() -> list[Path]:
     """Manifests of the modules `quire` resolves: the `IX_FILAMENT_MODULES_PATH`
-    modules when set (they replace the installed set), else the installed set."""
-    if modules := _env_module_dirs():
+    modules when set (they replace the installed set), else the installed set.
+    A set variable that names no module fails; it never falls back."""
+    if os.environ.get("IX_FILAMENT_MODULES_PATH"):
+        modules = _env_module_dirs()
+        if not modules:
+            pytest.fail("IX_FILAMENT_MODULES_PATH is set but names no module")
         return [d / "manifest.yaml" for d in modules]
     if shutil.which("quoin") is None:
         return []  # no env modules and no registry to list: nothing resolvable
@@ -726,6 +730,13 @@ def _coverage(repo: Path) -> dict:
         check=True,
     )
     return json.loads(out.stdout)
+
+
+def test_unresolvable_modules_path_fails_not_falls_back(monkeypatch, tmp_path):
+    """A set `IX_FILAMENT_MODULES_PATH` naming no module fails, never falling back."""
+    monkeypatch.setenv("IX_FILAMENT_MODULES_PATH", str(tmp_path / "missing"))
+    with pytest.raises(pytest.fail.Exception, match="IX_FILAMENT_MODULES_PATH"):
+        _declares_python_decorator()
 
 
 class TestStaticBinding:
