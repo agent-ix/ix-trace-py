@@ -24,3 +24,9 @@ No assurance profile exists in this repository; this is a direct review, not an 
 ## Verdict
 
 Every AC can fail as written. One medium coverage gap (FND-001), to fix in this PR.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fix commit b423570: AC-5 and TC-005 now include a method of a nested class reporting `Outer.Inner.method`, and the symbol table shows the example. |

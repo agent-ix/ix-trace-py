@@ -24,3 +24,9 @@ No assurance profile exists in this repository; this is a direct review, not an 
 ## Verdict
 
 Faithful relocation, with nothing weakened or lost. One low finding. No high finding. The base checklist does not block merge.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fix commit b423570: every AC Verification cell now reads `Test`, with no TC id (FR-001:102-112). |

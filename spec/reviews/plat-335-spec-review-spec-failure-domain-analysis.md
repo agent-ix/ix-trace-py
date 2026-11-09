@@ -24,3 +24,9 @@ No assurance profile exists in this repository; this is a direct review, not an 
 ## Verdict
 
 One low ambiguity. No unstated failure mode that blocks merge.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fix commit b423570: the FR prose, AC-9 and TC-009 now accept `xunit1` or its alias `legacy`, and fail on any other family. |
