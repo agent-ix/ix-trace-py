@@ -26,7 +26,7 @@ marker wherever it can.
 
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |----|----|----|--------|
-| FR-001 pytest trace-marker plugin | AC-1..11; CON-1 | TC-001..TC-011 | ✅ Implemented — passing |
+| FR-001 pytest trace-marker plugin | AC-1..11; CON-1 | TC-001..TC-015 | ✅ Implemented — passing |
 
 ## Test Case Summary
 
@@ -43,6 +43,10 @@ marker wherever it can.
 | TC-009 | Any family other than `xunit1`/`legacy` (`xunit2`, the default) fails the enabled run naming the family and `-o junit_family=xunit1`; `xunit1` and `legacy` carry `trace`, `name`, `classname`, `file` | Integration | P1 | FR-001-AC-9 | ✅ Passing |
 | TC-010 | Cost: 500-test marked suite under 5% median overhead with emission on | Integration | P1 | FR-001-AC-10 | ✅ Passing |
 | TC-011 | End to end: real pytest suite -> `quoin evidence record` binds; failing variant binds nothing | E2E | P1 | FR-001-AC-11 | ✅ Passing |
+| TC-012 | Installed plugin autoloads: no `-p`, no conftest; `trace` registered under `--strict-markers` and ids emitted | Integration | P1 | FR-001-AC-1 | ✅ Passing |
+| TC-013 | Inherited method is emitted as the defining class's symbol (`TestBase.test_x`), equal to `quire coverage --json` | Integration | P1 | FR-001-AC-5 | ✅ Passing |
+| TC-014 | Marks from `pytest.param(..., marks=...)` are not function markers and emit no id | Integration | P1 | FR-001-AC-3 | ✅ Passing |
+| TC-015 | A `trace` marker with keyword arguments fails the enabled run naming the test | Integration | P1 | FR-001-AC-4 | ✅ Passing |
 
 ## Constraint Coverage
 

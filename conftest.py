@@ -1,1 +1,1 @@
-pytest_plugins = ["pytester", "ix_trace_py.plugin"]
+pytest_plugins = ["pytester"]

@@ -66,6 +66,19 @@ def test_tagged():
 """
 
 
+INHERITED = """
+import pytest
+
+class TestBase:
+    @pytest.mark.trace("FR-001-AC-1")
+    def test_x(self):
+        pass
+
+class TestChild(TestBase):
+    pass
+"""
+
+
 def make_repo(tmp_path: Path, tests: str) -> Path:
     """A throwaway git repo holding this repo's spec and one test file."""
     repo = tmp_path / "repo"
@@ -156,6 +169,37 @@ def test_tc005_symbols_equal_quire_coverage(tmp_path):
             ("TestOuter.TestInner.test_deep", "tests/test_sample.py"),
             ("test_param", "tests/test_sample.py"),
         }
+    )
+
+
+def quire_symbols(repo: Path) -> set[tuple[str, str]]:
+    report = json.loads(
+        subprocess.run(
+            ["quire", "coverage", "--json", "--scope", str(repo)],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
+    return {
+        (b["qualified_name"], b["path"])
+        for doc in report["coverage_matrix"]
+        for criterion in doc["criteria"]
+        for b in criterion["binders"]
+    }
+
+
+@pytest.mark.trace("FR-001-AC-5")
+@needs_quire
+def test_tc013_inherited_method_keeps_the_symbol_quire_binds(tmp_path):
+    repo = make_repo(tmp_path, INHERITED)
+    root = run_pytest(repo)
+    cases = list(root.iter("testcase"))
+    assert len(cases) == 2
+    emitted = {(c.get("name"), c.get("file")) for c in cases}
+    assert all(c.get("name") == c.get("classname") for c in cases)
+    assert (
+        emitted == quire_symbols(repo) == {("TestBase.test_x", "tests/test_sample.py")}
     )
 
 

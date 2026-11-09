@@ -14,6 +14,7 @@ MARKER_NAME = "trace"
 PROPERTY_NAME = "trace"
 ALLOWED_FAMILIES = ("xunit1", "legacy")
 _SYMBOL_ATTR = "ix_trace_symbol"
+_symbol_key = pytest.StashKey[str]()
 
 
 def emission_enabled() -> bool:
@@ -41,12 +42,21 @@ def pytest_configure(config: pytest.Config) -> None:
     config.pluginmanager.register(_Emitter(config), "ix_trace_py_emitter")
 
 
-def _function_ids(item: pytest.Item) -> list[str]:
-    """Ids of the markers on the test function itself, each once, in order."""
+def _function_ids(item: pytest.Function) -> list[str]:
+    """Ids of the markers on the test function def itself, each once, in order.
+
+    Reads the function object, not `item.own_markers`, which also carries marks
+    from `pytest.param(..., marks=...)` that no `def` declares.
+    """
     ids: list[str] = []
-    for mark in item.own_markers:
+    for mark in getattr(item.function, "pytestmark", []):
         if mark.name != MARKER_NAME:
             continue
+        if mark.kwargs:
+            raise pytest.UsageError(
+                f"{item.nodeid}: trace marker takes positional str ids only, "
+                f"got keyword arguments {sorted(mark.kwargs)}"
+            )
         for arg in mark.args:
             if not isinstance(arg, str):
                 raise pytest.UsageError(
@@ -59,8 +69,14 @@ def _function_ids(item: pytest.Item) -> list[str]:
 
 
 def _symbol(item: pytest.Function) -> str:
-    classes = [n.name for n in item.listchain() if isinstance(n, pytest.Class)]
-    return ".".join([*classes, item.originalname])
+    """The qualified name `quire coverage` binds: the defining class, not the
+    collecting subclass, so an inherited method keeps its base-class symbol."""
+    name = item.originalname
+    if item.cls is not None:
+        for klass in item.cls.__mro__:
+            if name in vars(klass):
+                return f"{klass.__qualname__}.{name}"
+    return name
 
 
 class _Emitter:
@@ -76,15 +92,15 @@ class _Emitter:
             ids = _function_ids(item)
             if ids:
                 item.user_properties.append((PROPERTY_NAME, ",".join(ids)))
+                item.stash[_symbol_key] = _symbol(item)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item):
         outcome = yield
-        if isinstance(item, pytest.Function) and any(
-            name == PROPERTY_NAME for name, _ in item.user_properties
-        ):
+        symbol = item.stash.get(_symbol_key, None)
+        if symbol is not None:
             # A plain attribute travels with the report across xdist workers.
-            setattr(outcome.get_result(), _SYMBOL_ATTR, _symbol(item))
+            setattr(outcome.get_result(), _SYMBOL_ATTR, symbol)
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:

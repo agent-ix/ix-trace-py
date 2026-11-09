@@ -12,6 +12,7 @@ packages = [{ include = "ix_trace_py" }]
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14"
+pytest = ">=7.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -28,7 +29,7 @@ ruff = "^0.14.13"
 pytest-results = { version = "^0.2.0", python = ">=3.12" }
 
 [tool.poetry.plugins.pytest11]
-ix_trace_py = "ix_trace_py.plugin"
+"ix_trace_py.plugin" = "ix_trace_py.plugin"
 
 [tool.poetry.scripts]
 build-tools = "scripts.build_tools:main"
