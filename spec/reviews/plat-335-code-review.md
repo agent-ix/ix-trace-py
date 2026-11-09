@@ -28,3 +28,13 @@ Evidence: `make test` in the worktree after `poetry install` gave the ValueError
 | FND-003 | medium | `item.own_markers` includes callspec marks, so `pytest.param(2, marks=pytest.mark.trace("X"))` emits `X` for that case. That mark is not on the test function's `def`, and `quire coverage` binds nothing for it, which contradicts the FR-001 Description ("Only markers on the test function itself are emitted") and AC-4. Use `get_unpacked_marks(item.function)`-style function marks (or filter out `item.callspec.marks`). Untested. | ix_trace_py/plugin.py:45-57 |
 | FND-004 | low | Keyword arguments to the marker (`@pytest.mark.trace(ids="X")`) are silently ignored. The test runs and carries no `trace`. FR-001's "Failure is loud" intent says a malformed marker should fail naming the test, as a non-`str` positional does. | ix_trace_py/plugin.py:46-57 |
 | FND-005 | low | The plugin imports private `_pytest.junitxml.xml_key`, and the package declares no runtime `pytest` dependency or version floor (pytest is dev-only). Installing into an older or newer pytest without that private name fails at import with no clear message. Declare `pytest>=9` (the measured version) as a runtime dependency. | ix_trace_py/plugin.py:10, pyproject.toml:14-15 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 00c8af6: entry point renamed to `"ix_trace_py.plugin" = "ix_trace_py.plugin"` and `conftest.py` now lists only `pytester`. Verified at cdb008d after `poetry install`: `make test` passes 30/30 at 100% coverage. With autoload on, a bare run, `-p ix_trace_py.plugin`, and `pytest_plugins=["ix_trace_py.plugin"]` in a conftest all run without the ValueError and emit the symbols. TC-012 covers the autoload path. |
+| FND-002 | fixed | `_symbol` walks `item.cls.__mro__` to the class whose `vars()` defines the method and uses its `__qualname__`. TC-013 asserts both cases emit `TestBase.test_x`, equal to `quire coverage --json` (quire 0.36.2). |
+| FND-003 | fixed | `_function_ids` reads `getattr(item.function, "pytestmark", [])` (marks on the `def`) instead of `own_markers`. TC-014 asserts `pytest.param(..., marks=trace(...))` ids are not emitted, and that the `def` marker still is on both cases. |
+| FND-004 | fixed | A marker with `kwargs` raises `pytest.UsageError` naming the node id. TC-015 covers `ids="X"` and mixed positional plus keyword. |
+| FND-005 | fixed | `pytest = ">=7.0"` is now a runtime dependency. 7.0 is the release that introduced `StashKey`/`xml_key` and the public `pytest.Config`/`pytest.Item` types the plugin uses, so the floor is accurate. |

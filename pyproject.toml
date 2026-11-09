@@ -52,8 +52,10 @@ help = "Build distribution (wheel + sdist)"
 cmd = "build-tools clean"
 help = "Remove build artifacts"
 
+# The plugin is imported by pytest's entry-point loading, before pytest-cov
+# starts, so coverage must start first: `coverage run -m pytest`.
 [tool.poe.tasks.test]
-cmd = "pytest"
+sequence = [{ cmd = "coverage run -m pytest" }, { cmd = "coverage report" }]
 help = "Run tests with coverage"
 
 [tool.poe.tasks.test-integrations]
@@ -111,7 +113,7 @@ shell = "py-deps use-upstream ${package} || [ $? -eq 1 ] && poetry lock"
 help = "Switch dep to upstream registry"
 
 [tool.pytest.ini_options]
-addopts = "--cov=ix_trace_py --cov-report=term-missing --cov-fail-under=100 --json-report --json-report-file=report.json"
+addopts = "--json-report --json-report-file=report.json"
 
 # ALL WARNINGS MUST BE TREATED AS ERRORS, NO EXCEPTION!
 filterwarnings = ["error"]
@@ -119,6 +121,13 @@ filterwarnings = ["error"]
 markers = [
     "integration: Integration tests (require Kind cluster)",
 ]
+
+[tool.coverage.run]
+source = ["ix_trace_py"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
 
 [tool.ruff]
 line-length = 88

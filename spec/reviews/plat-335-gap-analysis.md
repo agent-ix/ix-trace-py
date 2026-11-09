@@ -26,3 +26,18 @@ TC-010 robustness was measured on this host, terra, at load average 12-16. Three
 | FND-001 | medium | AC-1 says "With the plugin installed", but every test runs with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` plus `-p ix_trace_py.plugin`. The `pytest11` entry-point path that real users get is never exercised, which is why SR-006 FND-001 (crash when installed and named with `-p`) passed CI-equivalent runs. Add a subprocess run with autoload on (marker registered, emission works, `-p ix_trace_py.plugin` does not crash). | tests/helpers.py:21-31, tests/test_plugin.py:21-28 |
 | FND-002 | medium | TC-010 is load-sensitive. It takes a wall-clock median of 5 runs against a 5% limit, always runs off before on, and pads each test with a 4 ms sleep, which dilutes the measured overhead into the noise band. Measured margins here were 1.3-4.0% against the 5% limit, with a 56% off-run spread. Make it robust within AC-10's wording: alternate or randomize on/off order per pair, take ≥11 runs (AC says "at least five"), and compare the median of per-pair on/off ratios (adjacent runs share load). Precompute the symbol once at collection instead of on each of the three `makereport` phases to trim the real cost. | tests/test_plugin.py:280-306 |
 | FND-003 | low | TC-002 compares only `<testcase>` attributes and `<property>` elements. AC-2 says the whole JUnit file is identical apart from timing. Compare the full trees with `time`/`timestamp` stripped, so a plugin-side change to `<testsuite>` or any other child would be caught. | tests/test_plugin.py:37-43 |
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-004 | medium | Fix commit 00c8af6 adds `importlib.reload(plugin)` to `test_tc002_plugin_imports_only_pytest_and_stdlib`, only so coverage counts the module's import-time lines (coverage inflation). The reload re-executes the module body, which creates a new `_symbol_key` StashKey, so every tagged test that runs after it in the same session loses its symbol. Reproduced: `QUIRE_TRACE_EMIT=1 pytest -o junit_family=xunit1 --junit-xml=...` over this repo's own suite emits the `qualified_name` for TC-001/TC-002 and then pytest's default `tests.test_plugin`/`test_x[case]` names for every later test, so this repo's own `quoin evidence record` would not join them. Remove the reload. To cover the plugin's import-time lines, start coverage before plugins load (`coverage run -m pytest`, the pytest-cov-documented approach for plugins). | tests/test_plugin.py:58-62 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | TC-012 (`test_tc012_installed_plugin_autoloads`) runs `runpytest_subprocess` with autoload left on, no `-p` and no conftest. It asserts `trace` is registered under `--strict-markers -W error` and that the id is emitted. Passes at cdb008d after `poetry install`. |
+| FND-002 | fixed | TC-010 now runs 11 adjacent on/off pairs, alternates which run goes first, and asserts the median of per-pair ratios is under 1.05. The symbol is computed once at collection. Measured at cdb008d on terra (load average 11-12): the test passed 3/3. Two concurrent replicas of its algorithm gave median ratios of 0.985 and 0.985 (single-pair range 0.95-1.11), a margin of about 6 points to the limit. |
+| FND-003 | fixed | TC-002 now compares the whole JUnit tree as text, with `time`/`timestamp` blanked (`_normalised`). |
+| FND-004 | still-open | Added this round, introduced by 00c8af6. The `importlib.reload(plugin)` in TC-002 is still present at cdb008d. Remove it and start coverage before plugin load instead. |

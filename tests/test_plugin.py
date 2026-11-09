@@ -51,15 +51,9 @@ def test_tc002_disabled_equals_no_plugin_run(pytester, monkeypatch, emit):
 @pytest.mark.trace("FR-001-AC-2")
 def test_tc002_plugin_imports_only_pytest_and_stdlib():
     import ast
-    import importlib
     import pathlib
 
     import ix_trace_py.plugin as plugin
-
-    # The installed entry point imports the plugin before coverage starts;
-    # re-executing the module body lets coverage see its import-time lines.
-    importlib.reload(importlib.import_module("ix_trace_py"))
-    importlib.reload(plugin)
 
     tree = ast.parse(pathlib.Path(plugin.__file__).read_text())
     imported = set()
