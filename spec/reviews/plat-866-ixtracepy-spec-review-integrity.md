@@ -25,3 +25,12 @@ Examined: FR-002-AC-1, FR-002-AC-2, FR-002-AC-3, FR-002-AC-4, FR-002-AC-5, FR-00
 ## Verdict
 
 No blocking findings; the low findings should be fixed in the same PR.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746: the empty-call message content is pinned (shows a well-formed call). Python keeps ValueError for a wrong value and TypeError for a wrong type, where ix-trace-ts uses TypeError throughout by JS convention; each follows its language's convention, so the split is not a defect. |
+| FND-002 | fixed | Fixed in 7739746: AC-6 now states the comparison (D alone's result; D receives the unchanged object). |

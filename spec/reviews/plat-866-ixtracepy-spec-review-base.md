@@ -28,3 +28,15 @@ Examined: FR-002, StR-002, StR-002-VC-1, StR-002-VC-2, US-002, FR-002-AC-1, FR-0
 ## Verdict
 
 No blocking findings; the low findings should be fixed in the same PR.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746: tests.md maps StR-002-VC-2 to TC-012 and TC-016. |
+| FND-002 | fixed | Fixed in 7739746: CON-1 evidence is its own; the FR-002 Constraints table is ordered CON-1..CON-4. |
+| FND-003 | fixed | Fixed in 7739746: FR-002 relationships add the spec-artifacts-process FR-004 consumes edge. |
+| FND-004 | fixed | Fixed in 7739746: System Description now covers the top-level module's stdlib-only import posture. The stray blank line in the In Scope list remains (cosmetic, non-blocking). |
+| FND-005 | fixed | Fixed in 7739746: StR-002 no longer claims the language checks the ids. |

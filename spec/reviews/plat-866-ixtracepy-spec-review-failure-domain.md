@@ -25,3 +25,12 @@ Examined: FR-002-ARGS, FR-002-DECO, FR-002-AC-4, FR-002-AC-7. Context only: FR-0
 ## Verdict
 
 Changes requested: 1 medium finding(s) must be fixed or dispositioned before merge.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746/34188b5: the ix-trace-rs FR-003 shape rule (as on ix-trace-rs main, underscored KIND included) is adopted with AC-10/TC-021 and CON-4 (shape, never membership); spec.md Out of Scope updated. Consistent with ix-trace-ts PR 8 at a10bb7d. |
+| FND-002 | fixed | Fixed in 7739746: the Description says the decorator runs when its definition executes, and AC-11/TC-022 test the nested case. |

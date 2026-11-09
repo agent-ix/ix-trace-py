@@ -25,3 +25,12 @@ Examined: FR-002-AC-1, FR-002-AC-2, FR-002-AC-3, FR-002-AC-4, FR-002-AC-5, FR-00
 ## Verdict
 
 Changes requested: 1 medium finding(s) must be fixed or dispositioned before merge.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746: AC-2 checks sys.getrefcount and gc.get_referrers across decoration; TC-013 includes failing module, closure and in-place-list registry fixtures. |
+| FND-002 | fixed | Fixed in 7739746: the timing clause is gone; AC-8 is identity only. |

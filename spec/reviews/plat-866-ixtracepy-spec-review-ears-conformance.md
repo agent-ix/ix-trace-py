@@ -24,3 +24,11 @@ Examined: FR-002, FR-002-ARGS, FR-002-CON-1, FR-002-CON-2, FR-002-CON-3, StR-002
 ## Verdict
 
 No blocking findings; the low findings should be fixed in the same PR.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746: the three rejection cases are If/then SHALL statements. |

@@ -25,3 +25,12 @@ Examined: FR-002-SPELL, FR-002-AC-9, FR-002-CON-2. Context only: FR-002, FR-002-
 ## Verdict
 
 Changes requested: 1 medium finding(s) must be fixed or dispositioned before merge.
+
+## Dispositions
+
+Round 1, verified against head 34188b5 (fix commits 7739746 and 34188b5).
+
+| FND | Outcome | Reason |
+| --- | --- | --- |
+| FND-001 | fixed | Fixed in 7739746: only double-quoted literals bind, matching merged spec-artifacts-process FR-004 (9fc6a8b) and quire-rs FR-062 at c7eadc1; AC-9/TC-020 add single-quoted, raw and triple-quoted cases. |
+| FND-002 | fixed | Fixed in 7739746: FR-002 says FR-004 will declare the form and that it is planned, matching merged FR-004. |
