@@ -689,6 +689,8 @@ def _module_manifests() -> list[Path]:
     modules when set (they replace the installed set), else the installed set."""
     if modules := _env_module_dirs():
         return [d / "manifest.yaml" for d in modules]
+    if shutil.which("quoin") is None:
+        return []  # no env modules and no registry to list: nothing resolvable
     listing = json.loads(
         subprocess.run(
             ["quoin", "module", "list"], capture_output=True, text=True, check=True
@@ -706,11 +708,6 @@ def _declares_python_decorator() -> bool:
         if any(e.get("syntax") == "python_decorator" for e in entries):
             return True
     return False
-
-
-needs_quoin = pytest.mark.skipif(
-    shutil.which("quoin") is None, reason="quoin CLI not installed"
-)
 
 
 def _coverage(repo: Path) -> dict:
@@ -736,13 +733,12 @@ class TestStaticBinding:
 
     @pytest.mark.trace("FR-002-AC-9")
     @needs_quire
-    @needs_quoin
     def test_tc024_quire_binds_the_two_spellings_only(self, tmp_path):
         """
         A fixture package is read by `quire coverage --json`.
 
         Assumptions:
-          - The test skips only when no installed module declares an
+          - The test skips only when no resolvable module declares an
             `implements` entry with `syntax: python_decorator`; once one does,
             every assertion below runs and a binding regression fails.
 
@@ -755,7 +751,7 @@ class TestStaticBinding:
           - No criterion has a `verifies` binder from the fixture file.
         """
         if not _declares_python_decorator():
-            pytest.skip("no installed module declares implements python_decorator")
+            pytest.skip("no resolvable module declares implements python_decorator")
         repo = tmp_path / "repo"
         shutil.copytree(
             ROOT / "spec", repo / "spec", ignore=shutil.ignore_patterns("reviews")

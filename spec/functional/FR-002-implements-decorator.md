@@ -159,6 +159,6 @@ unlike the compile-time Rust attribute, executes when its definition does.
 
 ## Dependencies
 
-- **Upstream**: [quire-rs FR-062](ix://agent-ix/quire-rs/FR-062) (the `implements` relation and the `python_decorator` syntax position); [spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004) (the form it will declare); `ix-trace-rs` FR-002 and FR-003 (the Rust counterpart and the shape rule).
+- **Upstream**: [quire-rs FR-062](ix://agent-ix/quire-rs/FR-062) (the `implements` relation and the `python_decorator` syntax position); [spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004) (the form it declares since v0.30.0); `ix-trace-rs` FR-002 and FR-003 (the Rust counterpart and the shape rule).
 - **Upstream**: [US-002](../usecase/US-002-declare-the-ids-a-production-symbol-implements.md), which traces to [StR-002](../stakeholder/StR-002-python-production-code-declares-the-ids-it-implements.md).
 - **Sibling**: [FR-001](./FR-001-pytest-trace-marker-plugin.md), the evidence side; `ix-trace-ts` FR-002, the TypeScript construct.
