@@ -6,6 +6,7 @@ import gc
 import importlib
 import inspect
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -672,15 +673,33 @@ def _trace_tag_forms(node) -> list[dict]:
     return found
 
 
-def _declares_python_decorator() -> bool:
-    """Whether an installed module declares an `implements` `python_decorator`."""
+def _env_module_dirs() -> list[Path]:
+    """Module directories named by `IX_FILAMENT_MODULES_PATH` (each root is a
+    module or a directory of modules); empty when the variable is unset."""
+    found: list[Path] = []
+    for root in os.environ.get("IX_FILAMENT_MODULES_PATH", "").split(os.pathsep):
+        if root:
+            found += [d.parent for d in [Path(root) / "manifest.yaml"] if d.exists()]
+            found += [m.parent for m in sorted(Path(root).glob("*/manifest.yaml"))]
+    return found
+
+
+def _module_manifests() -> list[Path]:
+    """Manifests of the modules `quire` resolves: the `IX_FILAMENT_MODULES_PATH`
+    modules when set (they replace the installed set), else the installed set."""
+    if modules := _env_module_dirs():
+        return [d / "manifest.yaml" for d in modules]
     listing = json.loads(
         subprocess.run(
             ["quoin", "module", "list"], capture_output=True, text=True, check=True
         ).stdout
     )
-    for plugin in listing["plugins"]:
-        manifest = Path(plugin["targetPath"]) / "manifest.yaml"
+    return [Path(p["targetPath"]) / "manifest.yaml" for p in listing["plugins"]]
+
+
+def _declares_python_decorator() -> bool:
+    """Whether a resolvable module declares an `implements` `python_decorator`."""
+    for manifest in _module_manifests():
         if not manifest.exists():
             continue
         entries = _trace_tag_forms(yaml.safe_load(manifest.read_text()))
@@ -697,7 +716,14 @@ needs_quoin = pytest.mark.skipif(
 def _coverage(repo: Path) -> dict:
     """The `quire coverage --json` report for `repo`, from the resolved modules."""
     out = subprocess.run(
-        ["quire", "coverage", "--json", "--scope", str(repo)],
+        [
+            "quire",
+            "coverage",
+            "--json",
+            "--scope",
+            str(repo),
+            *[arg for d in _env_module_dirs() for arg in ("--module", str(d))],
+        ],
         capture_output=True,
         text=True,
         check=True,

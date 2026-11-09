@@ -27,7 +27,7 @@ marker wherever it can.
 | Functional Req | Acceptance Criteria | Test Cases | Status |
 |----|----|----|--------|
 | FR-001 pytest trace-marker plugin | AC-1..11; CON-1 | TC-001..TC-015 | ✅ Implemented — passing |
-| FR-002 implements decorator | AC-1..11; CON-1..4 | TC-016..TC-026 | 🚧 Implemented — passing except TC-024, skipped until `python_decorator` is declared |
+| FR-002 implements decorator | AC-1..11; CON-1..4 | TC-016..TC-026 | ✅ Implemented — passing |
 
 ## Test Case Summary
 
@@ -56,7 +56,7 @@ marker wherever it can.
 | TC-021 | Stacking above and below another decorator `D` and above `@pytest.mark.trace(...)` yields `D` alone's result and gives `D` the unchanged object | Unit | P1 | FR-002-AC-6 | ✅ Passing |
 | TC-022 | Valid on module-level, method, nested function, nested class and test function; a test keeps its collection and `trace` property | Integration | P1 | FR-002-AC-7 | ✅ Passing |
 | TC-023 | Decorated function `is` the undecorated function | Unit | P1 | FR-002-AC-8 | ✅ Passing |
-| TC-024 | A fixture package decorated with `@implements(...)` and `@ix_trace_py.implements(...)` yields one `implements` per id and no `verifies` through `quire coverage --json`; a renamed import and single-quoted, raw and triple-quoted literals run and bind nothing | E2E | P1 | FR-002-AC-9 | 🚧 Skipped — `python_decorator` not yet declared |
+| TC-024 | A fixture package decorated with `@implements(...)` and `@ix_trace_py.implements(...)` yields one `implements` per id and no `verifies` through `quire coverage --json`; a renamed import and single-quoted, raw and triple-quoted literals run and bind nothing | E2E | P1 | FR-002-AC-9 | ✅ Passing against spec-artifacts-process v0.30.0 (skips on hosts whose modules do not declare `python_decorator`) |
 | TC-025 | Shape rule: `""`, `"FR 2"`, `"A-1, A-2"`, `"FR-XXX"` and `"1-A"` raise `ValueError` naming the argument; `ZZ-001`, `MADEUP-042-AC-9` and `interface_004-AC-1` are accepted; no kind list exists in the package | Unit | P1 | FR-002-AC-10 | ✅ Passing |
 | TC-026 | A nested decorated definition checks its ids on each call of the enclosing function, a module-level one once at import, and both return the unchanged object | Unit | P1 | FR-002-AC-11 | ✅ Passing |
 
@@ -77,11 +77,11 @@ marker wherever it can.
 | StR-001-VC-1 | US-001; FR-001 | Demonstration — covered by TC-011 | ✅ |
 | StR-001-VC-2 | FR-001 | Demonstration — covered by TC-011 failing variant | ✅ |
 | StR-001-VC-3 | FR-001 | Demonstration — covered by TC-009 | ✅ |
-| StR-002-VC-1 | US-002; FR-002 | Demonstration — covered by TC-024 | 🚧 |
+| StR-002-VC-1 | US-002; FR-002 | Demonstration — covered by TC-024 | ✅ |
 | StR-002-VC-2 | FR-002 | Demonstration — covered by TC-016 and TC-020 | ✅ |
 
 ## Verification Status
 
-Implemented: every test case above exists and passes, except TC-024, which skips until the installed `spec-artifacts-process` declares `python_decorator`. The extractor-side equality of
+Implemented: every test case above exists and passes. TC-024 runs against the modules named by `IX_FILAMENT_MODULES_PATH` (else the installed set) and skips only where none declares `python_decorator`. The extractor-side equality of
 the plugin's symbols (TC-005) is cross-checked by quire-rs FR-051-AC-47 and
 FR-051-AC-48.

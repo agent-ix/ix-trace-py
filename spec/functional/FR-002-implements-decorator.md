@@ -30,8 +30,8 @@ counterpart of the `#[implements]` attribute of `ix-trace-rs`
 
 The static side is [quire-rs FR-062](ix://agent-ix/quire-rs/FR-062): it binds the
 decorator from the syntax tree, through the `python_decorator` form that
-[spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004) will
-declare (planned there, not yet declared in the manifest). This requirement adds
+[spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004)
+declares since spec-artifacts-process v0.30.0. This requirement adds
 only the run-time object the written form names, so that the form is an importable
 symbol and not an undefined name.
 
