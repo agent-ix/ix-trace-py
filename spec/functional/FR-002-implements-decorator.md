@@ -68,6 +68,15 @@ environment where pytest is not installed. The pytest plugin of
 [FR-001](./FR-001-pytest-trace-marker-plugin.md) lives in its own module, and only
 the `pytest11` entry point loads it.
 
+### Statically bound spellings
+
+The static side resolves no import. The spellings it binds are `@implements(...)`
+and `@ix_trace_py.implements(...)`, as the module declaration pins them
+([spec-artifacts-process FR-004](ix://agent-ix/spec-artifacts-process/FR-004)).
+A renamed import (`import ix_trace_py as t`, `from ix_trace_py import implements as
+impl`) works at run time and is not bound statically; write one of the two spellings
+for a decorator that is to be read.
+
 ### Stacking and placement
 
 The decorator composes with any other decorator in any order and returns what it
@@ -98,7 +107,7 @@ unlike the compile-time Rust attribute, executes at import.
 | FR-002-AC-6 | `@implements(...)` stacked above and below another decorator, and above `@pytest.mark.trace(...)` on one definition, each leaves the other decorator's effect unchanged and the result identical to applying that decorator alone. | Test |
 | FR-002-AC-7 | The decorator is valid on a module-level definition, a method, a nested function and a nested class, and on a test function, where it changes neither the test's collection nor its `trace` property under `QUIRE_TRACE_EMIT=1`. | Test |
 | FR-002-AC-8 | Calling a function decorated with `implements` 100,000 times adds no measurable per-call time over the undecorated function: the decorated and undecorated callables are the same object, asserted by identity, and the median call time over at least five runs differs by under 5%. | Test |
-| FR-002-AC-9 | A fixture package whose production definitions carry `@implements(...)` yields, through `quire coverage --json` under the module of `spec-artifacts-process`, one `implements` relation per declared id on the decorated symbol and no `verifies` relation. | Test |
+| FR-002-AC-9 | A fixture package whose production definitions carry `@implements(...)` yields, through `quire coverage --json` under the module of `spec-artifacts-process`, one `implements` relation per declared id on the decorated symbol and no `verifies` relation, for both `@implements(...)` and `@ix_trace_py.implements(...)`, while a decorator written through a renamed import binds nothing. | Test |
 
 ## Constraints
 
