@@ -6,6 +6,7 @@ import gc
 import importlib
 import inspect
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -672,15 +673,39 @@ def _trace_tag_forms(node) -> list[dict]:
     return found
 
 
-def _declares_python_decorator() -> bool:
-    """Whether an installed module declares an `implements` `python_decorator`."""
+def _env_module_dirs() -> list[Path]:
+    """Module directories named by `IX_FILAMENT_MODULES_PATH` (each root is a
+    module or a directory of modules); empty when the variable is unset."""
+    found: list[Path] = []
+    for root in os.environ.get("IX_FILAMENT_MODULES_PATH", "").split(os.pathsep):
+        if root:
+            found += [d.parent for d in [Path(root) / "manifest.yaml"] if d.exists()]
+            found += [m.parent for m in sorted(Path(root).glob("*/manifest.yaml"))]
+    return found
+
+
+def _module_manifests() -> list[Path]:
+    """Manifests of the modules `quire` resolves: the `IX_FILAMENT_MODULES_PATH`
+    modules when set (they replace the installed set), else the installed set.
+    A set variable that names no module fails; it never falls back."""
+    if os.environ.get("IX_FILAMENT_MODULES_PATH"):
+        modules = _env_module_dirs()
+        if not modules:
+            pytest.fail("IX_FILAMENT_MODULES_PATH is set but names no module")
+        return [d / "manifest.yaml" for d in modules]
+    if shutil.which("quoin") is None:
+        return []  # no env modules and no registry to list: nothing resolvable
     listing = json.loads(
         subprocess.run(
             ["quoin", "module", "list"], capture_output=True, text=True, check=True
         ).stdout
     )
-    for plugin in listing["plugins"]:
-        manifest = Path(plugin["targetPath"]) / "manifest.yaml"
+    return [Path(p["targetPath"]) / "manifest.yaml" for p in listing["plugins"]]
+
+
+def _declares_python_decorator() -> bool:
+    """Whether a resolvable module declares an `implements` `python_decorator`."""
+    for manifest in _module_manifests():
         if not manifest.exists():
             continue
         entries = _trace_tag_forms(yaml.safe_load(manifest.read_text()))
@@ -689,15 +714,17 @@ def _declares_python_decorator() -> bool:
     return False
 
 
-needs_quoin = pytest.mark.skipif(
-    shutil.which("quoin") is None, reason="quoin CLI not installed"
-)
-
-
 def _coverage(repo: Path) -> dict:
     """The `quire coverage --json` report for `repo`, from the resolved modules."""
     out = subprocess.run(
-        ["quire", "coverage", "--json", "--scope", str(repo)],
+        [
+            "quire",
+            "coverage",
+            "--json",
+            "--scope",
+            str(repo),
+            *[arg for d in _env_module_dirs() for arg in ("--module", str(d))],
+        ],
         capture_output=True,
         text=True,
         check=True,
@@ -705,18 +732,24 @@ def _coverage(repo: Path) -> dict:
     return json.loads(out.stdout)
 
 
+def test_unresolvable_modules_path_fails_not_falls_back(monkeypatch, tmp_path):
+    """A set `IX_FILAMENT_MODULES_PATH` naming no module fails, never falling back."""
+    monkeypatch.setenv("IX_FILAMENT_MODULES_PATH", str(tmp_path / "missing"))
+    with pytest.raises(pytest.fail.Exception, match="IX_FILAMENT_MODULES_PATH"):
+        _declares_python_decorator()
+
+
 class TestStaticBinding:
     """quire binds the decorator from the syntax tree (quire-rs FR-062)."""
 
     @pytest.mark.trace("FR-002-AC-9")
     @needs_quire
-    @needs_quoin
     def test_tc024_quire_binds_the_two_spellings_only(self, tmp_path):
         """
         A fixture package is read by `quire coverage --json`.
 
         Assumptions:
-          - The test skips only when no installed module declares an
+          - The test skips only when no resolvable module declares an
             `implements` entry with `syntax: python_decorator`; once one does,
             every assertion below runs and a binding regression fails.
 
@@ -729,7 +762,7 @@ class TestStaticBinding:
           - No criterion has a `verifies` binder from the fixture file.
         """
         if not _declares_python_decorator():
-            pytest.skip("no installed module declares implements python_decorator")
+            pytest.skip("no resolvable module declares implements python_decorator")
         repo = tmp_path / "repo"
         shutil.copytree(
             ROOT / "spec", repo / "spec", ignore=shutil.ignore_patterns("reviews")
