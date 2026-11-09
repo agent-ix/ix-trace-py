@@ -6,6 +6,9 @@ relationships:
   - target: "ix://agent-ix/ix-trace-py/StR-001"
     type: "implements"
     cardinality: "1:1"
+  - target: "ix://agent-ix/ix-trace-py/US-001"
+    type: "implements"
+    cardinality: "1:1"
   - target: "ix://agent-ix/quoin/FR-120"
     type: "implements"
     cardinality: "1:1"
@@ -65,7 +68,7 @@ the repo-relative `/`-separated path:
 | Test shape | `name` and `classname` |
 | --- | --- |
 | Module-level function | The bare function name. The module is never a prefix. |
-| Method of a class | `Class.method` (nested classes dot-joined). |
+| Method of a class | `Class.method` (nested classes dot-joined: `Outer.Inner.method`). |
 | Parametrized test | The source function name, with the `[case]` suffix removed; each case is its own `<testcase>` carrying that symbol. |
 
 pytest's default `classname` (the dotted module path) and `name` (with the
@@ -78,8 +81,10 @@ names the test. A string held in a variable is a `str` at run time and is emitte
 the static side does not bind it.
 
 `file` is required on every tagged case, and pytest's default `junit_family`
-(`xunit2`) drops it, where `xunit1` keeps it (measured on pytest 9.0.2). An enabled
-run under any family other than `xunit1` therefore fails with an error that names
+(`xunit2`) drops it, where `xunit1` keeps it (measured on pytest 9.0.2). pytest
+maps the family `legacy` to `xunit1` (`_pytest/junitxml.py`), so `legacy` keeps
+`file` too. An enabled run under any family other than `xunit1` or its alias
+`legacy` therefore fails with an error that names
 the family and the remedy `-o junit_family=xunit1`. The plugin never writes a
 result file that silently lacks a mark or a `file`.
 
@@ -94,17 +99,17 @@ without the rename the static and execution views never join.
 
 | ID | Criteria | Verification |
 | --- | --- | --- |
-| FR-001-AC-1 | With the plugin installed, a test marked `@pytest.mark.trace("FR-001-AC-1")` collects with no `PytestUnknownMarkWarning`, and the suite passes under `--strict-markers`, whether or not emission is enabled. | Test (TC-001) |
-| FR-001-AC-2 | While `QUIRE_TRACE_EMIT` is unset or not `1`, the JUnit file of a marked suite is identical, apart from timing attributes, to the file of the same run without the plugin installed, contains no `trace` property, and the plugin imports nothing beyond pytest and the standard library. | Test (TC-002) |
-| FR-001-AC-3 | While enabled, a test function carrying several markers, or one marker with several ids, has one `trace` property holding each id once; a function with no marker carries none, and a marker on its class or module adds nothing. | Test (TC-003) |
-| FR-001-AC-4 | While enabled, every id written is an argument of a marker on that test function; an id is never inferred from a test or file name, and a marker argument that is not a `str` fails the run naming the test. | Test (TC-004) |
-| FR-001-AC-5 | While enabled, a module-level test reports its bare name, a method reports `Class.method`, and a test parametrized with two cases yields two `<testcase>` elements both named for the source function with no `[case]` suffix; for each, `name` equals `classname`, `file` is the repo-relative path, and all three equal what `quire coverage --json` reports for the same fixture. | Test (TC-005) |
-| FR-001-AC-6 | A marked test that fails, raises in setup or teardown, is skipped, or is marked `xfail` is recorded with the outcome pytest's own `<failure>`, `<error>` or `<skipped>` child reports, and with its ids; no outcome is written that pytest did not report. | Test (TC-006) |
-| FR-001-AC-7 | Under `pytest-xdist` with two or more workers, each marked test appears once with exactly its own ids, none mixed with another test's. | Test (TC-007) |
-| FR-001-AC-8 | The result file is written by pytest's own `--junit-xml` writer; the plugin writes no sidecar file and runs no step after pytest exits. | Test (TC-008) |
-| FR-001-AC-9 | An enabled run under `junit_family=xunit2` fails with an error naming the family and the remedy `-o junit_family=xunit1`, and writes no result file lacking `file`; under `xunit1` every tagged case carries `trace`, `name`, `classname` and `file`. | Test (TC-009) |
-| FR-001-AC-10 | While enabled, a 500-test marked suite adds under 5% to the median wall-clock time of the same suite with emission disabled, over at least five runs each. | Test (TC-010) |
-| FR-001-AC-11 | A real pytest suite run with emission enabled produces a result file that `quoin evidence record` accepts and whose obligation is bound; the same suite with its tagged test made to fail yields a failing entry and binds nothing. | Test (TC-011) |
+| FR-001-AC-1 | With the plugin installed, a test marked `@pytest.mark.trace("FR-001-AC-1")` collects with no `PytestUnknownMarkWarning`, and the suite passes under `--strict-markers`, whether or not emission is enabled. | Test |
+| FR-001-AC-2 | While `QUIRE_TRACE_EMIT` is unset or not `1`, the JUnit file of a marked suite is identical, apart from timing attributes, to the file of the same run without the plugin installed, contains no `trace` property, and the plugin imports nothing beyond pytest and the standard library. | Test |
+| FR-001-AC-3 | While enabled, a test function carrying several markers, or one marker with several ids, has one `trace` property holding each id once; a function with no marker carries none, and a marker on its class or module adds nothing. | Test |
+| FR-001-AC-4 | While enabled, every id written is an argument of a marker on that test function; an id is never inferred from a test or file name, and a marker argument that is not a `str` fails the run naming the test. | Test |
+| FR-001-AC-5 | While enabled, a module-level test reports its bare name, a method reports `Class.method`, a method of a nested class reports `Outer.Inner.method`, and a test parametrized with two cases yields two `<testcase>` elements both named for the source function with no `[case]` suffix; for each, `name` equals `classname`, `file` is the repo-relative path, and all three equal what `quire coverage --json` reports for the same fixture. | Test |
+| FR-001-AC-6 | A marked test that fails, raises in setup or teardown, is skipped, or is marked `xfail` is recorded with the outcome pytest's own `<failure>`, `<error>` or `<skipped>` child reports, and with its ids; no outcome is written that pytest did not report. | Test |
+| FR-001-AC-7 | Under `pytest-xdist` with two or more workers, each marked test appears once with exactly its own ids, none mixed with another test's. | Test |
+| FR-001-AC-8 | The result file is written by pytest's own `--junit-xml` writer; the plugin writes no sidecar file and runs no step after pytest exits. | Test |
+| FR-001-AC-9 | An enabled run under any `junit_family` other than `xunit1` or its alias `legacy` (so under `xunit2`, the default) fails with an error naming the family and the remedy `-o junit_family=xunit1`, and writes no result file lacking `file`; under `xunit1` or `legacy` every tagged case carries `trace`, `name`, `classname` and `file`. | Test |
+| FR-001-AC-10 | While enabled, a 500-test marked suite adds under 5% to the median wall-clock time of the same suite with emission disabled, over at least five runs each. | Test |
+| FR-001-AC-11 | A real pytest suite run with emission enabled produces a result file that `quoin evidence record` accepts and whose obligation is bound; the same suite with its tagged test made to fail yields a failing entry and binds nothing. | Test |
 
 ## Constraints
 
@@ -114,6 +119,6 @@ without the rename the static and execution views never join.
 
 ## Dependencies
 
-- **Upstream**: [Quoin FR-120](ix://agent-ix/quoin/FR-120) (the mark and the Emitter contract); [quire-rs FR-051](ix://agent-ix/quire-rs/FR-051) (the marker form, and the `qualified_name` the plugin must equal, pinned by FR-051-AC-47; the end-to-end demonstration of the emitter chain is FR-051-AC-48).
-- **Upstream**: [StR-001](../stakeholder/StR-001-python-tests-bind-ids-at-run-time.md) through [US-001](../usecase/US-001-run-a-marked-suite-and-record-its-evidence.md).
+- **Upstream**: [Quoin FR-120](ix://agent-ix/quoin/FR-120) (the mark and the Emitter contract); [quire-rs FR-051](ix://agent-ix/quire-rs/FR-051) (the marker form, and the `qualified_name` the plugin must equal, pinned by FR-051-AC-47; the end-to-end demonstration of the emitter chain is FR-051-AC-48). FR-051-AC-47 and FR-051-AC-48 are added by quire-rs#622, which lands together with this specification.
+- **Upstream**: [US-001](../usecase/US-001-run-a-marked-suite-and-record-its-evidence.md), which traces to [StR-001](../stakeholder/StR-001-python-tests-bind-ids-at-run-time.md).
 - **Sibling**: `ix-trace-ts` FR-001, the vitest binding of the same contract.
